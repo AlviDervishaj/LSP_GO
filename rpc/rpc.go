@@ -12,6 +12,27 @@ type BaseMessage struct {
 	Method string `json:"method"`
 }
 
+// Split function for scanner.Split
+func Split(data []byte, _ bool) (advance int, token []byte, err error) {
+	header, content, found := bytes.Cut(data, []byte{'\r', '\n', '\r', '\n'})
+	if !found {
+		return 0, nil, nil
+	}
+	// Content-Length: <NUMBER>
+	contentLengthBytes := header[len("Content-Length: "):]
+	contentLength, err := strconv.Atoi(string(contentLengthBytes))
+	// if error in content Length
+	if err != nil {
+		return 0, nil, nil
+	}
+	// wait to read enough bytes
+	if len(content) < contentLength {
+		return 0, nil, nil
+	}
+	// len of header + 4 ( separator \r\n\r\n )
+	totalLengthInBytes := len(header) + 4 + contentLength
+	return totalLengthInBytes, data[:totalLengthInBytes], nil
+}
 func EncodeMessage(message any) string {
 	content, err := json.Marshal(message)
 	if err != nil {
